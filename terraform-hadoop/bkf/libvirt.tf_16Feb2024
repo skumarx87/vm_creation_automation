@@ -1,0 +1,148 @@
+
+resource "libvirt_volume" "centos7" {
+  name = "centos-stable"
+  #source = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
+  source = "./CentOS-7-x86_64-GenericCloud.qcow2"
+}
+
+data "template_file" "master_user_data" {
+  template = file("${path.module}/config/master_cloud_init.cfg")
+}
+
+/*
+data "template_file" "worker_user_data" {
+  template = file("${path.module}/config/worker_cloud_init.cfg")
+  vars = {
+	hostname = "${local.env}-worker.example.com"
+	}
+}
+*/
+
+
+resource "libvirt_volume" "kworkercentos" {
+  name = "${local.env}-kworkercentos${count.index}"
+  base_volume_id = "${libvirt_volume.centos7.id}"
+  count =3
+}
+
+resource "libvirt_cloudinit_disk" "kworkercommoninit" {
+  name = "${local.env}-kworkercentos${count.index}.iso"
+  #local_hostname = "kworkercentos${count.index}"
+  count = 3
+  #user_data = "${data.template_file.worker_user_data.rendered}"
+  user_data = templatefile("${path.module}/config/worker_cloud_init.cfg",{ hostname = "worker",inc = count.index})
+  #user_data = "${element(data.template_file.worker_user_data.rendered,count.index)}"
+
+
+}
+
+resource "libvirt_domain" "kubecluster_kworker" {
+  name = "${local.env}-kubecluster_kworker${count.index}"
+  disk {
+       volume_id = "${element(libvirt_volume.kworkercentos.*.id, count.index)}"
+  }
+  count = 3 
+  network_interface {
+    network_name = "default"
+    hostname = "${local.env}-kworker${count.index}.tanu.com"
+    wait_for_lease = "true"
+  }
+  cloudinit = "${element(libvirt_cloudinit_disk.kworkercommoninit.*.id, count.index)}"
+
+  connection {
+      type     = "ssh"
+      user     = "sathish"
+      private_key = file("/root/.ssh/id_rsa")
+      #host = aws_instance.web.public_ip
+      host = self.network_interface.0.addresses.0
+	}
+
+provisioner "file" {
+	source      = "scripts/bootstrap.sh"
+	destination = "/tmp/script.sh"
+}
+provisioner "remote-exec" {
+	inline = [	
+	"chmod +x /tmp/script.sh",
+	"sh -x /tmp/script.sh"
+	]
+}
+
+
+}
+
+/*
+resource "libvirt_domain" "kubecluster_kmaster" {
+  name = "${local.env}-kubecluster_kmaster${count.index}"
+  disk {
+       volume_id = "${element(libvirt_volume.kmastercentos.*.id, count.index)}"
+  }
+  count = 1
+  network_interface {
+    network_name = "default"
+    hostname = "${local.env}-kmaster${count.index}.tanu.com"
+    wait_for_lease = "true"
+  }
+  cloudinit = "${element(libvirt_cloudinit_disk.kmastercommoninit.*.id, count.index)}"
+
+
+}
+*/
+
+/*
+
+output "kworker" {
+value = "${libvirt_domain.kubecluster_kworker[*].network_interface.0.addresses.0}"
+}
+
+*/
+
+output "kworker" {
+value  = tomap({
+#for key,ip in libvirt_domain.kubecluster_kworker : libvirt_domain.kubecluster_kworker[key].name => ip.network_interface.0.addresses.0
+for key,ip in libvirt_domain.kubecluster_kworker : ip.network_interface.0.hostname => ip.network_interface.0.addresses.0
+})
+}
+
+
+
+resource "libvirt_volume" "kmastercentos" {
+  name = "kmastercentos${count.index}"
+  base_volume_id = "${libvirt_volume.centos7.id}"
+  count = 1 
+}
+
+resource "libvirt_cloudinit_disk" "kmastercommoninit" {
+  name = "kmastercentos${count.index}.iso"
+  #local_hostname = "kmastercentos${count.index}"
+  count = 1
+  user_data = "${data.template_file.master_user_data.rendered}"
+}
+
+resource "libvirt_domain" "kubecluster_kmaster" {
+  name = "${local.env}-kubecluster_kmaster${count.index}"
+  disk {
+       volume_id = "${element(libvirt_volume.kmastercentos.*.id, count.index)}"
+  }
+  count = 1
+  network_interface {
+    network_name = "default"
+    hostname = "${local.env}-kmaster${count.index}.tanu.com"
+    wait_for_lease = "true"
+  }
+  cloudinit = "${element(libvirt_cloudinit_disk.kmastercommoninit.*.id, count.index)}"
+
+
+}
+/*
+output "kmaster" {
+value = "${libvirt_domain.kubecluster_kmaster[*].network_interface.0.addresses.0}"
+}
+*/
+
+output "kmaster" {
+value  = tomap({
+for key,ip in libvirt_domain.kubecluster_kmaster : ip.network_interface.0.hostname => ip.network_interface.0.addresses.0
+})
+}
+
