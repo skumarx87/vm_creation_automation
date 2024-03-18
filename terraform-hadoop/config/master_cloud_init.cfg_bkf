@@ -1,0 +1,29 @@
+#cloud-config
+# vim: syntax=yaml
+#
+# ***********************
+# 	---- for more examples look at: ------
+# ---> https://cloudinit.readthedocs.io/en/latest/topics/examples.html
+# ******************************
+#
+# This is the configuration syntax that the write_files module
+# will know how to understand. encoding can be given b64 or gzip or (gz+b64).
+# The content will be decoded accordingly and then written to the path that is
+# provided.
+#
+# Note: Content strings here are truncated for example purposes.
+ssh_pwauth: True
+fqdn: "${hostname}"
+chpasswd:
+  list: |
+     root: sathish123
+  expire: False
+
+users:
+  - name: "${super_user}" # Change me
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCqwNk1snI7nr5/Q5oQ3I5RHonPjSq1hdogIx+Oeeq+v23wBeF8fa3U7j1/cpcn3STVevd8n0fubpdEXWcRyVPJfPFRkiebhYN9FnrVx8SRtyoOS8AveYVRSVl2xhPiDNVhEGK183tRH8jWpa52Mdrv9AA9Z6voglfqH8qZsVMqZiUe5YUFVGjhFK+A/jJBHyTpu6GNT27bARSlMkiK09MU12GYYdhAORyQcq+hbaS8rCkNuh+4CSIbDROaYpfxW4eol3nDjlMPp8rq7l/DdlpgtbGBQ7mYX8TBl2PaRtkinAgNmUgbz3KOJBJ2qevpgE1g6DsMTdu7fJVbpYGoYxuHx05Tyk1GRKZ7PvjEZPop4nCAQYsbNbq+0REmj+DlG9SGfhM27LC8YIBDrkJ4c4DYe93TpugTunY43pqiSI4kW/lM8sJJwbA3LMzgUU9UJpuZblF/sqIzVGPF8Ynv9Iydq+3HnP2sM1sPkOX5U7CDdPeZlgJLe0o2XyRM3UoFJwk= root@sathish-desktop #Chageme
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    plain_text_passwd: sathish123
+    shell: /bin/bash
+    groups: wheel
