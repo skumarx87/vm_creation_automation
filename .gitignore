@@ -1,7 +1,7 @@
-terraform-hadoop/terraform.tfstate*
-terraform-hadoop/bigdata-3.0.0-build.tar
-terraform-hadoop/CentOS-7-x86_64-GenericCloud.qcow2
-terraform-hadoop/.terraform.lock.hcl
-terraform-hadoop/.terraform
+terraform-kvm-hadoop/terraform.tfstate*
+terraform-kvm-hadoop/bigdata-3.0.0-build.tar
+terraform-kvm-hadoop/CentOS-7-x86_64-GenericCloud.qcow2
+terraform-kvm-hadoop/.terraform.lock.hcl
+terraform-kvm-hadoop/.terraform
 
 

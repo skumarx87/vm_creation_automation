@@ -50,11 +50,99 @@ echo -e "$hadoop_user_password\n$hadoop_user_password" | passwd $hadoop_user >/d
 #172.16.16.105   sworker2.example.com    sworker2
 #EOF
 
-echo "[TASK 6] Installing Java"
+echo "[TASK 5] Installing Java"
 
-yum -y install git-core net-tools wget lsof
+yum -y install git-core net-tools wget lsof nc psmisc
 yum install -y java-1.8.0-openjdk.x86_64 java-1.8.0-openjdk-devel
 mkdir -p  /usr/bigdata /usr/bigdata/softwares
 #mkdir -p /usr/bigdata/data/{name_dir,data_dir,hive}
 chown -R $hadoop_user:$hadoop_user /usr/bigdata
 
+echo "[TASK 6] setting up ansible for hadoop user"
+
+su - $hadoop_user <<EOF
+echo "$PWD"
+
+cd /usr/bigdata/softwares
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -p /usr/bigdata/Miniconda3
+echo export ANSIBLE_CONFIG=/usr/bigdata/ansibleProjects/files >>~/.bash_profile
+export PATH=/usr/bigdata/Miniconda3/bin:\$PATH
+echo PATH=/usr/bigdata/Miniconda3/bin:\$PATH >>~/.bash_profile
+echo export LANG=\"en_US.UTF-8\" >>~/.bash_profile
+/usr/bigdata/Miniconda3/bin/conda create -n ansible -y
+source activate ansible
+pip install ansible
+EOF
+
+
+echo "[TASK 7] Creating ansible host file"
+
+su - $hadoop_user <<EOF1
+mkdir -p /usr/bigdata/ansibleProjects/files/
+mkdir -p /usr/bigdata/data/data_dir
+cat >>/usr/bigdata/ansibleProjects/files/hosts<<EOF2
+
+###################
+###################
+[default]
+dev1-kworker0.tanu.com
+
+[buildserver]
+dev1-kworker0.tanu.com
+
+[nameNode]
+dev1-kmaster1.tanu.com
+dev1-kmaster0.tanu.com
+
+[dataNode]
+dev1-kmaster1.tanu.com
+dev1-kworker0.tanu.com
+
+[hiveNode]
+dev1-kmaster1.tanu.com
+
+[hueNode]
+dev1-kmaster1.tanu.com
+
+[hiveserver2Node]
+dev1-kmaster1.tanu.com
+
+
+[hivemetastoreNode]
+dev1-kworker0.tanu.com
+dev1-kmaster1.tanu.com
+
+[sparkMaster]
+dev1-kmaster1.tanu.com
+dev1-kmaster0.tanu.com
+
+
+[sparkWorker]
+dev1-kmaster1.tanu.com
+dev1-kworker0.tanu.com
+
+[zookeeperNode]
+dev1-kmaster0.tanu.com zookeeper_id=1       #hostname command returns "zoo1"
+dev1-kmaster1.tanu.com zookeeper_id=2       #hostname command returns "zoo2"
+dev1-kworker0.tanu.com zookeeper_id=3       #hostname command returns "zoo3"
+
+[journalNode]
+dev1-kmaster1.tanu.com
+dev1-kmaster0.tanu.com
+dev1-kworker0.tanu.com
+
+EOF2
+EOF1
+
+echo "[TASK 8] Creating ansible.cfg file"
+
+su - $hadoop_user <<EOF1
+cat >>/usr/bigdata/ansibleProjects/files/ansible.cfg<<EOF2
+[defaults]
+inventory         = hosts
+host_key_checking = False
+###############################
+EOF2
+EOF1
+echo export LANG=\"en_US.UTF-8\" >>~/.bash_profile

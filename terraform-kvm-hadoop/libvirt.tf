@@ -1,6 +1,6 @@
 ###### base Image ########
 resource "libvirt_volume" "centos7" {
-  name = "centos-stable"
+  name = "${local.env}-centos-stable"
   #source = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
   source = "./CentOS-7-x86_64-GenericCloud.qcow2"
 }
@@ -10,6 +10,7 @@ resource "libvirt_volume" "centos7" {
 resource "libvirt_volume" "kworkercentos" {
   #name = "${local.env}-kworkercentos${count.index}"
   name ="${local.env}-${local.workers_prefix}${count.index}"
+  size = "${local.kworker_disk_size}"
   base_volume_id = "${libvirt_volume.centos7.id}"
   count = "${local.kworker_count}"
 }
@@ -87,11 +88,12 @@ for key,ip in libvirt_domain.kubecluster_kworker : ip.network_interface.0.addres
 })
 }
 
-####### Master configuration ######
+################## Master configuration #########################
 
 resource "libvirt_volume" "kmastercentos" {
   #name = "kmastercentos${count.index}"
   name = "${local.env}-${local.masters_prefix}${count.index}"
+  size = "${local.kmaster_disk_size}"
   base_volume_id = "${libvirt_volume.centos7.id}"
   count = "${local.kmaster_count}"
 }
